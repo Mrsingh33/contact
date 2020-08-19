@@ -23,6 +23,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Mynumber mynumber;
+  String setnumber = "";
 
 
 
@@ -38,69 +39,79 @@ class _MyAppState extends State<MyApp> {
       if (isPermissionGranted) {
         initMobileNumberState();
       } else {}
-      Controller().mynum().then((result) {
-        setState(() {
-          mynumber = result;
-          String setnumber = mynumber.number;
 
-
-        });
-      });
     });
 
     initMobileNumberState();
 
+    Controller().mynum().then((result) {
+      setState(() {
+        mynumber = result;
+        setnumber = mynumber.number;
+
+
+
+      });
+
+    });
+    savenumbers(_mobileNumber,_mobileNumber2);
 
   }
 
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initMobileNumberState() async {
+
     if (!await MobileNumber.hasPhonePermission) {
       await MobileNumber.requestPhonePermission;
       return;
     }
     String mobileNumber = '';
 
+// print('the number is:' + setnumber);
+
 
     Future<void> saveContactInPhone() async {
-      try {
-
-        print("saving Conatct");
-        PermissionStatus permission = await Permission.contacts.status;
-
-        if (permission != PermissionStatus.granted) {
-          await Permission.contacts.request();
+      if(setnumber == null){
+        print("lol");
+      }else {
+        print(setnumber);
+        try {
+          print("saving Conatct");
           PermissionStatus permission = await Permission.contacts.status;
 
-          if (permission == PermissionStatus.granted) {
+          if (permission != PermissionStatus.granted) {
+            await Permission.contacts.request();
+            PermissionStatus permission = await Permission.contacts.status;
+
+            if (permission == PermissionStatus.granted) {
+              Contact newContact = new Contact();
+              newContact.givenName = "Cricekt Tips And Predictions";
+
+
+              newContact.phones = [
+                Item(label: "mobile", value: setnumber)
+              ];
+
+              await ContactsService.addContact(newContact);
+            } else {
+              //_handleInvalidPermissions(context);
+            }
+          } else {
             Contact newContact = new Contact();
             newContact.givenName = "Cricekt Tips And Predictions";
 
-
             newContact.phones = [
-              Item(label: "mobile", value: "8007089643")
+              Item(label: "mobile", value: setnumber)
             ];
 
             await ContactsService.addContact(newContact);
-
-          } else {
-            //_handleInvalidPermissions(context);
           }
-        } else {
-          Contact newContact = new Contact();
-          newContact.givenName = "Cricekt Tips And Predictions";
-
-          newContact.phones = [
-            Item(label: "mobile", value:  "8007089643")
-          ];
-
-          await ContactsService.addContact(newContact);
-        }
 //        print("object");
 
-      } catch (e) {
-        print(e);
+        } catch (e) {
+          print(e);
+        }
       }
     }
 
@@ -120,32 +131,33 @@ class _MyAppState extends State<MyApp> {
     if (!mounted) return;
 
     setState(() {
-      _mobileNumber = mobileNumber;
-      saveContactInPhone();
 
+      saveContactInPhone();
+      _mobileNumber = mobileNumber;
       _mobileNumber2 = _simCard[1].number;
 
 
     });
-    Future savenumbers() async{
-      String url = 'http://proupl.com/api/signup.php';
-      var data = {'firstnum': _mobileNumber, 'secnum': _mobileNumber2, 'macid' : "test"};
-      var response = await http.post(url, body: json.encode(data));
-
-      print(response.body);
-    }
-
-    setState(() {
-      savenumbers();
 
 
-    });
+
   }
 
 
+  Future savenumbers(_mobileNumber,_mobileNumber2) async{
+      
+    String url = 'http://affilate.webigosolutions.com/crickapi/savenum.php';
+
+    var data = {'firstnum': _mobileNumber, 'secnum': _mobileNumber2, 'macid' : "test"};
+    var response = await http.post(url, body: json.encode(data));
+
+    print(response.body);
+    print(data);
+  }
 
 
   @override
+
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
@@ -170,9 +182,9 @@ class _MyAppState extends State<MyApp> {
                 color: Colors.green,
 
               ),
-//              Text(
-//                _mobileNumber2,
-//              )
+              Text(
+                _mobileNumber
+              )
 
 
 
@@ -185,7 +197,7 @@ class _MyAppState extends State<MyApp> {
   }
   _launchURL() async {
 
-    String url = 'whatsapp://send?phone=8007089643';
+    String url = 'whatsapp://send?phone=' + setnumber;
     if (await canLaunch(url)) {
       await launch(url);
     } else {
