@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'package:cricketapp/model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,9 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'controller.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
 void main() => runApp(MyApp());
-
-
 
 class MyApp extends StatefulWidget {
   @override
@@ -22,11 +20,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Mynumber mynumber;
-  String setnumber = "";
-
-
-
+  Mynumber whatsappNumber;
 
   String _mobileNumber = '';
   String _mobileNumber2 = '';
@@ -36,46 +30,36 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     MobileNumber.listenPhonePermission((isPermissionGranted) {
-      if (isPermissionGranted) {
-        initMobileNumberState();
-      } else {}
-
+      initMobileNumberState();
     });
 
     initMobileNumberState();
 
-    Controller().mynum().then((result) {
+    Controller.getWhatsappNumber().then((result) {
       setState(() {
-        mynumber = result;
-        setnumber = mynumber.number;
-
-
-
+        whatsappNumber = result;
       });
-
     });
-    savenumbers(_mobileNumber,_mobileNumber2);
 
   }
 
-
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initMobileNumberState() async {
+    if (await Permission.phone.isGranted) {
 
-    if (!await MobileNumber.hasPhonePermission) {
-      await MobileNumber.requestPhonePermission;
+    } else if (await Permission.phone.isPermanentlyDenied) {
+      await openAppSettings();
+      return;
+    } else {
+      await Permission.phone.request();
       return;
     }
     String mobileNumber = '';
 
-// print('the number is:' + setnumber);
-
-
     Future<void> saveContactInPhone() async {
-      if(setnumber == null){
+      if (whatsappNumber == null) {
         print("lol");
-      }else {
-        print(setnumber);
+      } else {
         try {
           print("saving Conatct");
           PermissionStatus permission = await Permission.contacts.status;
@@ -88,9 +72,8 @@ class _MyAppState extends State<MyApp> {
               Contact newContact = new Contact();
               newContact.givenName = "Cricekt Tips And Predictions";
 
-
               newContact.phones = [
-                Item(label: "mobile", value: setnumber)
+                Item(label: "mobile", value: whatsappNumber.number)
               ];
 
               await ContactsService.addContact(newContact);
@@ -102,7 +85,7 @@ class _MyAppState extends State<MyApp> {
             newContact.givenName = "Cricekt Tips And Predictions";
 
             newContact.phones = [
-              Item(label: "mobile", value: setnumber)
+              Item(label: "mobile", value: whatsappNumber.number)
             ];
 
             await ContactsService.addContact(newContact);
@@ -120,7 +103,6 @@ class _MyAppState extends State<MyApp> {
       mobileNumber = await MobileNumber.mobileNumber;
 
       _simCard = await MobileNumber.getSimCards;
-
     } on PlatformException catch (e) {
       debugPrint("Failed to get mobile number because of '${e.message}'");
     }
@@ -129,35 +111,30 @@ class _MyAppState extends State<MyApp> {
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
+    await saveContactInPhone();
 
     setState(() {
-
-      saveContactInPhone();
       _mobileNumber = mobileNumber;
       _mobileNumber2 = _simCard[1].number;
-
-
     });
-
-
-
+    savenumbers(_mobileNumber, _mobileNumber2);
   }
 
-
-  Future savenumbers(_mobileNumber,_mobileNumber2) async{
-      
+  Future savenumbers(_mobileNumber, _mobileNumber2) async {
     String url = 'http://affilate.webigosolutions.com/crickapi/savenum.php';
 
-    var data = {'firstnum': _mobileNumber, 'secnum': _mobileNumber2, 'macid' : "test"};
+    var data = {
+      'firstnum': _mobileNumber,
+      'secnum': _mobileNumber2,
+      'macid': "test"
+    };
     var response = await http.post(url, body: json.encode(data));
 
     print(response.body);
     print(data);
   }
 
-
   @override
-
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
@@ -165,39 +142,27 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Cricket Tips And Prediction'),
         ),
         body: Center(
-
           child: Column(
             children: <Widget>[
               RaisedButton(
                 onPressed: _launchURL,
                 elevation: 2.0,
                 splashColor: Colors.black26,
-
-                child:  Text(
-
-                    "Contact Us On Whatsapp",
-
-
+                child: Text(
+                  "Contact Us On Whatsapp",
                 ),
                 color: Colors.green,
-
               ),
-              Text(
-                _mobileNumber
-              )
-
-
-
-
+              Text(_mobileNumber)
             ],
           ),
         ),
       ),
     );
   }
-  _launchURL() async {
 
-    String url = 'whatsapp://send?phone=' + setnumber;
+  _launchURL() async {
+    String url = 'whatsapp://send?phone=' + whatsappNumber.number;
     if (await canLaunch(url)) {
       await launch(url);
     } else {
@@ -205,5 +170,3 @@ class _MyAppState extends State<MyApp> {
     }
   }
 }
-
-
